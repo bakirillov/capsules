@@ -14,7 +14,7 @@ def squash(vector, dim=-1):
 
 def find_probability(t):
     """Compute softmaxed length of vector"""
-    return(F.softmax((t.squeeze(-1)**2).sum(-1)*0.5, dim=-1))
+    return(F.softmax((t.squeeze(-1)**2).sum(-1)**0.5, dim=-1))
 
 def get_a_capsule(u,n,k):
     """Return the contents of a capsule"""
@@ -94,7 +94,7 @@ class SecondaryCapsuleLayer(nn.Module):
     
 class RegularizingDecoder(nn.Module):
     
-    def __init__(self, dims=[16,512,1024,784]):
+    def __init__(self, dims=[160,512,1024,784]):
         super(RegularizingDecoder, self).__init__()
         self.decoder = nn.Sequential(
             nn.Linear(dims[0], dims[1]),
@@ -135,9 +135,7 @@ class CapsuleLoss(nn.Module):
         """Compute margin and reconstruction losses"""
         mask = self.ones.index_select(0, real_classes)
         ml = self.margin_loss(internal, mask)
-        inp = inp.detach()
-        reconstructions = reconstructions.detach()
         rl = self.reconstruction_loss(
-            inp, reconstructions
+            reconstructions, inp
         )
         return(ml+self.a*rl)
