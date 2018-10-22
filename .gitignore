@@ -3,3 +3,5 @@ python-mnist/*
 *.ptch
 .ipynb_checkpoints
 __pycache__
+Catface_example.ipynb
+Catface_VAER.ipynb
