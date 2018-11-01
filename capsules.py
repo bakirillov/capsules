@@ -73,6 +73,9 @@ class SecondaryCapsuleLayer(nn.Module):
             out = squash((probabilities*P).sum(dim=2, keepdim=True))
             if i != self.n_iter - 1:
                 L = L + (P*out).sum(dim=-1, keepdim=True)
+        out = out.squeeze().transpose(1,0)
+        if x.shape[0] == 1:
+            out = out.reshape(1, *out.shape).transpose(2,1)
         return(out)
     
     
