@@ -121,5 +121,5 @@ class CapsuleLoss(nn.Module):
             inputs = inputs[labels.argmax(1) == self.normal_class]
         reconstruction_loss = self.reconstruction_loss(
             reconstructions, inputs
-        )
+        ).sum()
         return((margin_loss+self.a*reconstruction_loss)/inputs.size(0))
