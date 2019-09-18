@@ -4,6 +4,11 @@ from torch import nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+def anomaly_score(lengths, inp, reconstruction, normal_class=0, anomaly_class=1):
+    recloss = nn.MSELoss(reduction="none")
+    difference = lengths.T[normal_class] - lengths.T[anomaly_class]
+    return(difference+recloss(inp, reconstruction))
+    
 def squash(vector, dim=-1):
     """Activation function for capsule"""
     sj2 = (vector**2).sum(dim, keepdim=True)
