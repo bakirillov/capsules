@@ -95,21 +95,31 @@ class RegularizingDecoder(nn.Module):
     def forward(self, x):
         """Feed-forward reconstructor"""
         return(self.decoder(x))
-    
+
     
 class CapsuleLoss(nn.Module):
     
-    def __init__(self, ms=(0.9, 0.1), l=0.5, adjustment=0.0005):#, n_classes=10):
+    def __init__(
+        self, ms=(0.9, 0.1), l=0.5, adjustment=0.0005, only_normals=False, 
+        normal_class=0
+    ):
         super(CapsuleLoss, self).__init__()
         self.l = l
         self.m_p = ms[0]
         self.m_n = ms[1]
         self.a = adjustment
-        self.reconstruction_loss = nn.MSELoss(size_average=False)
+        self.only_normals = only_normals
+        self.normal_class = normal_class
+        self.reconstruction_loss = nn.MSELoss(reduction="none")
             
     def forward(self, labels, inputs, classes, reconstructions):
         left = F.relu(self.m_p - classes, inplace=True) ** 2
         right = F.relu(classes - self.m_n, inplace=True) ** 2
         margin_loss = (labels*left + self.l*(1-labels)*right).sum()
-        reconstruction_loss = self.reconstruction_loss(reconstructions, inputs)
+        if self.only_normals:
+            reconstructions = reconstructions[labels.argmax(1) == self.normal_class]
+            inputs = inputs[labels.argmax(1) == self.normal_class]
+        reconstruction_loss = self.reconstruction_loss(
+            reconstructions, inputs
+        )
         return((margin_loss+self.a*reconstruction_loss)/inputs.size(0))
