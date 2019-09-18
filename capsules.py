@@ -5,9 +5,15 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 def anomaly_score(lengths, inp, reconstruction, normal_class=0, anomaly_class=1):
+    """Anomaly score based on https://arxiv.org/pdf/1909.02755.pdf"""
     recloss = nn.MSELoss(reduction="none")
     difference = lengths.T[normal_class] - lengths.T[anomaly_class]
-    return(difference+recloss(inp, reconstruction))
+    return(difference+recloss(inp, reconstruction).sum())
+    
+def normality_scores(lengths, inp, reconstruction, normal_class=0, anomaly_class=1):
+    """Normality scores based on https://arxiv.org/pdf/1907.06312.pdf"""
+    recloss = nn.MSELoss(reduction="none")
+    return(F.softmax(lengths, dim=1).max(1)[0], (recloss(inp, reconstruction)/inp).sum())
     
 def squash(vector, dim=-1):
     """Activation function for capsule"""
