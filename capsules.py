@@ -2,19 +2,21 @@ import torch
 import numpy as np
 from torch import nn
 import torch.nn.functional as F
-from torch.autograd import Variable
+from scipy.special import softmax
 
-def anomaly_score(lengths, inp, reconstruction, normal_class=0, anomaly_class=1):
-    """Anomaly score based on https://arxiv.org/pdf/1909.02755.pdf"""
-    recloss = nn.MSELoss(reduction="none")
+
+def anomaly_scores(lengths, inp, reconstruction, normal_class=0, anomaly_class=1):
+    """Anomaly scores based on https://arxiv.org/pdf/1909.02755.pdf"""
     difference = lengths.T[normal_class] - lengths.T[anomaly_class]
-    return(difference+recloss(inp, reconstruction).sum())
+    return(difference, np.sum((inp-reconstruction)**2, 1))
     
-def normality_scores(lengths, inp, reconstruction, normal_class=0, anomaly_class=1):
+def normality_scores(lengths, inp, reconstruction):
     """Normality scores based on https://arxiv.org/pdf/1907.06312.pdf"""
-    recloss = nn.MSELoss(reduction="none")
-    return(F.softmax(lengths, dim=1).max(1)[0], (recloss(inp, reconstruction)/inp).sum())
-    
+    return(
+        softmax(lengths, axis=1).max(1), 
+        np.sum((inp-reconstruction)**2, 1)
+    )
+
 def squash(vector, dim=-1):
     """Activation function for capsule"""
     sj2 = (vector**2).sum(dim, keepdim=True)
@@ -24,7 +26,7 @@ def squash(vector, dim=-1):
     )
 
 def make_y(labels, n_classes):
-    masked = Variable(torch.eye(n_classes))
+    masked = torch.eye(n_classes)
     masked = masked.cuda() if torch.cuda.is_available() else masked
     masked = masked.index_select(dim=0, index=labels)
     return(masked)
@@ -77,7 +79,7 @@ class SecondaryCapsuleLayer(nn.Module):
     
     def forward(self, x):
         P = x[None, :, :, None, :] @ self.W[:, None, :, :, :]
-        L = Variable(torch.zeros(*P.size()))
+        L = torch.zeros(*P.size())
         L = L.cuda() if torch.cuda.is_available() else L
         for i in range(self.n_iter):
             probabilities = F.softmax(L, dim=2)
