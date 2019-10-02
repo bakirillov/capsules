@@ -66,13 +66,17 @@ class PrimaryCapsuleLayer(nn.Module):
     
 class SecondaryCapsuleLayer(nn.Module):
     
-    def __init__(self, n_capsules=10, n_iter=3, n_routes=32*6*6, in_ch=8, out_ch=16):
+    def __init__(
+        self, n_capsules=10, n_iter=3, n_routes=32*6*6, in_ch=8, out_ch=16, 
+        return_agreement=False
+    ):
         super(SecondaryCapsuleLayer, self).__init__()
         self.n_capsules = n_capsules
         self.n_iter = n_iter
         self.n_routes = n_routes
         self.in_ch = in_ch
         self.out_ch = out_ch
+        self.ra = return_agreement
         self.W = nn.Parameter(
             torch.randn(self.n_capsules, self.n_routes, self.in_ch, self.out_ch)
         )
@@ -83,13 +87,17 @@ class SecondaryCapsuleLayer(nn.Module):
         L = L.cuda() if torch.cuda.is_available() else L
         for i in range(self.n_iter):
             probabilities = F.softmax(L, dim=2)
-            out = squash((probabilities*P).sum(dim=2, keepdim=True))
+            agreement = probabilities*P
+            out = squash((agreement).sum(dim=2, keepdim=True))
             if i != self.n_iter - 1:
                 L = L + (P*out).sum(dim=-1, keepdim=True)
         out = out.squeeze().transpose(1,0)
         if x.shape[0] == 1:
             out = out.reshape(1, *out.shape).transpose(2,1)
-        return(out)
+        if self.ra:
+            return(out, agreement.cpu().data.numpy())
+        else:
+            return(out)
     
     
 class RegularizingDecoder(nn.Module):
