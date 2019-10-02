@@ -122,13 +122,15 @@ class CapsuleLoss(nn.Module):
     
     def __init__(
         self, ms=(0.9, 0.1), l=0.5, adjustment=0.0005, only_normals=False, 
-        normal_class=0
+        normal_class=0, shift=False, scale=False
     ):
         super(CapsuleLoss, self).__init__()
         self.l = l
         self.m_p = ms[0]
         self.m_n = ms[1]
         self.a = adjustment
+        self.scale = scale
+        self.shift = shift
         self.only_normals = only_normals
         self.normal_class = normal_class
         self.reconstruction_loss = nn.MSELoss(reduction="none")
@@ -140,6 +142,10 @@ class CapsuleLoss(nn.Module):
         if self.only_normals:
             reconstructions = reconstructions[labels.argmax(1) == self.normal_class]
             inputs = inputs[labels.argmax(1) == self.normal_class]
+        if self.shift:
+            inputs = inputs+1
+        if self.scale:
+            inputs = inputs/inputs.max()
         reconstruction_loss = self.reconstruction_loss(
             reconstructions, inputs
         ).sum()
