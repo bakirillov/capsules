@@ -87,15 +87,14 @@ class SecondaryCapsuleLayer(nn.Module):
         L = L.cuda() if torch.cuda.is_available() else L
         for i in range(self.n_iter):
             probabilities = F.softmax(L, dim=2)
-            agreement = probabilities*P
-            out = squash((agreement).sum(dim=2, keepdim=True))
+            out = squash((probabilities*P).sum(dim=2, keepdim=True))
             if i != self.n_iter - 1:
                 L = L + (P*out).sum(dim=-1, keepdim=True)
         out = out.squeeze().transpose(1,0)
         if x.shape[0] == 1:
             out = out.reshape(1, *out.shape).transpose(2,1)
         if self.ra:
-            return(out, agreement.cpu().data.numpy())
+            return(out, probabilities.cpu().data.numpy())
         else:
             return(out)
     
