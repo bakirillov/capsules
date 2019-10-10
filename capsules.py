@@ -115,7 +115,7 @@ class RegularizingDecoder(nn.Module):
     def forward(self, x):
         """Feed-forward reconstructor"""
         return(self.decoder(x))
-
+    
     
 class CapsuleLoss(nn.Module):
     
@@ -149,3 +149,73 @@ class CapsuleLoss(nn.Module):
             reconstructions, inputs
         ).sum()
         return((margin_loss+self.a*reconstruction_loss)/inputs.size(0))
+    
+    
+class HitOrMissLayer(nn.Module):
+    
+    def __init__(
+        self, in_ch=256*6*6, out_ch=32, n_classes=10
+    ):
+        """Hit or Miss layer from Hitnet paper (https://arxiv.org/pdf/1806.06519.pdf)"""
+        super(HitOrMissLayer, self).__init__()
+        self.hom = nn.Sequential(
+            nn.Linear(in_ch, n_classes*out_ch),
+            nn.BatchNorm1d(n_classes*out_ch),
+            nn.Sigmoid()
+        )
+        self.in_ch = in_ch
+        self.out_ch = out_ch
+        self.n_classes = n_classes
+    
+    def forward(self, x):
+        xx = x.reshape(x.shape[0], -1)
+        return(self.hom(xx).reshape(xx.shape[0], self.n_classes, self.out_ch))
+
+    
+def mask_hom(hom, ys):
+    """Masking function for Hitnet"""
+    def make_mask(y):
+        return(y.repeat(hom.shape[-1], 1).permute(1, 0))
+    mask = torch.stack([make_mask(a) for a in ys])
+    mask = mask.cuda() if torch.cuda.is_available() else mask
+    return(hom*mask)
+
+
+class CentripetalLoss(nn.Module):
+    
+    def __init__(
+        self, m_hit=0.1, h_step=0.1, v_step=0.2, m_miss=0.9, caps_dimension=16,
+        use_ghosts=False, adjustment=0.005
+    ):
+        """Loss for HitOrMiss capsules"""
+        super(CentripetalLoss, self).__init__()
+        self.m_hit = m_hit
+        self.h_step = h_step
+        self.v_step = v_step
+        self.caps_dimension = caps_dimension
+        self.use_ghosts = use_ghosts
+        self.m_miss = m_miss
+        self.reconstruction_loss = nn.MSELoss(reduction="mean")
+        self.adjustment = adjustment
+        
+    def forward(self, predictions, true_labels, inputs, reconstructions):
+        floored = ((predictions-self.m_hit)/self.h_step).floor()
+        zero = torch.Tensor(0)
+        heaviside = torch.sign(F.relu(predictions-self.m_hit))
+        L1_1 = (floored*(floored+1))*self.v_step*self.h_step*0.5
+        L1_2 = (floored+1)*self.v_step*(predictions-self.m_hit-floored*self.h_step)
+        L1 = heaviside*(L1_1+L1_2)
+        r_factor = 0.5*(self.caps_dimension**0.5)
+        m_miss_r = r_factor-self.m_miss
+        predictions_r = r_factor-predictions
+        floored = ((predictions_r-m_miss_r)/self.h_step).floor()
+        heaviside = torch.sign(F.relu(predictions_r-m_miss_r))
+        L2_1 = (floored*(floored+1))*self.h_step*self.v_step*0.5
+        L2_2 = (floored+1)*self.v_step*(predictions_r-m_miss_r-floored*self.h_step)
+        L2 = heaviside*(L2_1+L2_2)
+        L_cp = true_labels*L1+0.5*(1-true_labels)*L2
+        L_rec = self.reconstruction_loss(
+            inputs.reshape(inputs.shape[0], -1), reconstructions
+        )
+        L_final = L_cp+self.adjustment*L_rec
+        return(L_final.sum(1).mean())
