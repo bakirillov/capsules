@@ -68,7 +68,7 @@ class SecondaryCapsuleLayer(nn.Module):
     
     def __init__(
         self, n_capsules=10, n_iter=3, n_routes=32*6*6, in_ch=8, out_ch=16, 
-        return_agreement=False
+        return_agreement=False, cuda=True
     ):
         super(SecondaryCapsuleLayer, self).__init__()
         self.n_capsules = n_capsules
@@ -80,11 +80,12 @@ class SecondaryCapsuleLayer(nn.Module):
         self.W = nn.Parameter(
             torch.randn(self.n_capsules, self.n_routes, self.in_ch, self.out_ch)
         )
+        self.cuda = cuda
     
     def forward(self, x):
         P = x[None, :, :, None, :] @ self.W[:, None, :, :, :]
         L = torch.zeros(*P.size())
-        L = L.cuda() if torch.cuda.is_available() else L
+        L = L.cuda() if torch.cuda.is_available() and self.cuda else L
         for i in range(self.n_iter):
             probabilities = F.softmax(L, dim=2)
             out = squash((probabilities*P).sum(dim=2, keepdim=True))
