@@ -25,9 +25,9 @@ def squash(vector, dim=-1):
         sj2/(1.0+sj2)*vector/sj
     )
 
-def make_y(labels, n_classes):
+def make_y(labels, n_classes, use_cuda=True):
     masked = torch.eye(n_classes)
-    masked = masked.cuda() if torch.cuda.is_available() else masked
+    masked = masked.cuda() if torch.cuda.is_available() and use_cuda else masked
     masked = masked.index_select(dim=0, index=labels)
     return(masked)
 
