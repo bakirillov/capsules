@@ -10,11 +10,11 @@ def anomaly_scores(lengths, inp, reconstruction, normal_class=0, anomaly_class=1
     difference = lengths.T[normal_class] - lengths.T[anomaly_class]
     return(difference, np.sum((inp-reconstruction)**2, 1))
     
-def normality_scores(lengths, inp, reconstruction):
+def normality_scores(lengths, inp, reconstruction, use_softmax=True):
     """Normality scores based on https://arxiv.org/pdf/1907.06312.pdf"""
+    u = softmax(lengths, axis=1).max(1) if use_softmax else lengths.max(1)
     return(
-        softmax(lengths, axis=1).max(1), 
-        np.sum((inp-reconstruction)**2/np.sum(inp**2), 1)
+        u, np.sum((inp-reconstruction)**2/np.sum(inp**2), 1)
     )
 
 def squash(vector, dim=-1):
