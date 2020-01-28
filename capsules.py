@@ -14,7 +14,7 @@ def normality_scores(lengths, inp, reconstruction, use_softmax=True):
     """Normality scores based on https://arxiv.org/pdf/1907.06312.pdf"""
     u = softmax(lengths, axis=1).max(1) if use_softmax else lengths.max(1)
     return(
-        u, -np.sum((inp-reconstruction)**2/np.sum(inp), 1)
+        u, -np.sum(((inp-reconstruction)**2)**2/np.sum(inp), 1)
     )
 
 def squash(vector, dim=-1):
