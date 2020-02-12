@@ -68,7 +68,7 @@ class SecondaryCapsuleLayer(nn.Module):
     
     def __init__(
         self, n_capsules=10, n_iter=3, n_routes=32*6*6, in_ch=8, out_ch=16, 
-        return_agreement=False, cuda=True
+        return_couplings=False, cuda=True
     ):
         super(SecondaryCapsuleLayer, self).__init__()
         self.n_capsules = n_capsules
@@ -76,7 +76,7 @@ class SecondaryCapsuleLayer(nn.Module):
         self.n_routes = n_routes
         self.in_ch = in_ch
         self.out_ch = out_ch
-        self.ra = return_agreement
+        self.rc = return_couplings
         self.W = nn.Parameter(
             torch.randn(self.n_capsules, self.n_routes, self.in_ch, self.out_ch)
         )
@@ -94,7 +94,7 @@ class SecondaryCapsuleLayer(nn.Module):
         out = out.squeeze().transpose(1,0)
         if x.shape[0] == 1:
             out = out.reshape(1, *out.shape).transpose(2,1)
-        if self.ra:
+        if self.rc:
             return(out, probabilities.cpu().data.numpy())
         else:
             return(out)
