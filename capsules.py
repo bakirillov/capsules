@@ -45,40 +45,40 @@ class PrimaryCapsuleLayer(nn.Module):
         )
     
     def __init__(
-        self, n_capsules=8, in_ch=256, out_ch=32, kernel_size=9, stride=2
+        self, n_convs=8, in_ch=256, out_ch=32, kernel_size=9, stride=2
     ):
         super(PrimaryCapsuleLayer, self).__init__()
-        self.n_capsules = n_capsules
+        self.n_convs = n_convs
         self.in_ch = in_ch
         self.out_ch = out_ch
         self.kernel_size = kernel_size
         self.stride = stride
         self.n_capsules = n_capsules
-        self.capsules = nn.ModuleList([])
-        for a in range(self.n_capsules):
-            self.capsules.append(self.make_conv())
+        self.convs = nn.ModuleList([])
+        for a in range(self.n_convs):
+            self.convs.append(self.make_conv())
             
     def forward(self, x):
         """Compute outputs of capsules, reshape and squash"""
-        out = torch.cat([a(x).view(x.size(0), -1, 1) for a in self.capsules], dim=-1)
+        out = torch.cat([a(x).view(x.size(0), -1, 1) for a in self.convs], dim=-1)
         return(squash(out))
         
     
 class SecondaryCapsuleLayer(nn.Module):
     
     def __init__(
-        self, n_capsules=10, n_iter=3, n_routes=32*6*6, in_ch=8, out_ch=16, 
+        self, n_capsules=10, n_iter=3, n_primary=32*6*6, in_ch=8, out_ch=16, 
         return_couplings=False, cuda=True
     ):
         super(SecondaryCapsuleLayer, self).__init__()
         self.n_capsules = n_capsules
         self.n_iter = n_iter
-        self.n_routes = n_routes
+        self.n_primary = n_primary
         self.in_ch = in_ch
         self.out_ch = out_ch
         self.rc = return_couplings
         self.W = nn.Parameter(
-            torch.randn(self.n_capsules, self.n_routes, self.in_ch, self.out_ch)
+            torch.randn(self.n_capsules, self.n_primary, self.in_ch, self.out_ch)
         )
         self.cuda = cuda
     
