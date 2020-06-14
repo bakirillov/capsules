@@ -53,7 +53,6 @@ class PrimaryCapsuleLayer(nn.Module):
         self.out_ch = out_ch
         self.kernel_size = kernel_size
         self.stride = stride
-        self.n_capsules = n_capsules
         self.convs = nn.ModuleList([])
         for a in range(self.n_convs):
             self.convs.append(self.make_conv())
